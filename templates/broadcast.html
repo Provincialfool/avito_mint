@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="ru" data-bs-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Рассылка — Админка ЧАТ-БОТА</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+        <div class="container">
+            <a class="navbar-brand" href="/"><i class="fas fa-robot me-2"></i>Админка ЧАТ-БОТА</a>
+            <div class="navbar-nav ms-auto">
+                <a class="nav-link" href="{{ url_for('index') }}"><i class="fas fa-tachometer-alt me-1"></i> Главная</a>
+                <a class="nav-link" href="{{ url_for('participants') }}"><i class="fas fa-users me-1"></i> Участники</a>
+                <a class="nav-link active" href="{{ url_for('broadcast') }}"><i class="fas fa-bullhorn me-1"></i> Рассылка</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mt-4">
+        <h1 class="mb-4"><i class="fas fa-bullhorn me-2"></i> Рассылка</h1>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ 'success' if category == 'success' else 'danger' }} alert-dismissible fade show">
+                        <i class="fas fa-{{ 'check-circle' if category == 'success' else 'exclamation-circle' }} me-2"></i>
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        <div class="row">
+            <div class="col-lg-8">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0"><i class="fas fa-paper-plane me-2"></i>Новое сообщение</h5>
+                    </div>
+                    <div class="card-body">
+                        <form method="POST" action="{{ url_for('broadcast') }}" enctype="multipart/form-data">
+                            <div class="mb-3">
+                                <label for="message" class="form-label">Текст сообщения (Markdown/Telegram HTML)</label>
+                                <textarea class="form-control" id="message" name="message" rows="6" placeholder="Введите текст рассылки..." required></textarea>
+                                <div class="form-text">
+                                    <strong>Поддержка Telegram-разметки:</strong>
+                                    <code>*курсив*</code>, <code>**жирный**</code>, <code>`код`</code>, <code>[ссылка](https://...)</code>.<br>
+                                    <span>Можно использовать emoji и стандартный markdown.</span>
+                                </div>
+                            </div>
+                            <div class="mb-3">
+                                <label for="photo" class="form-label">Фото (необязательно, jpg/png, до 10 МБ)</label>
+                                <input type="file" class="form-control" id="photo" name="photo" accept="image/*">
+                            </div>
+                            <div class="mb-3 row">
+                                <div class="col">
+                                    <label for="send_date" class="form-label">Дата</label>
+                                    <input type="date" class="form-control" id="send_date" name="send_date">
+                                </div>
+                                <div class="col">
+                                    <label for="send_time" class="form-label">Время</label>
+                                    <input type="time" class="form-control" id="send_time" name="send_time">
+                                </div>
+                            </div>
+                            <div class="form-check mb-3">
+                                <input class="form-check-input" type="checkbox" id="confirmSend" required>
+                                <label class="form-check-label text-warning" for="confirmSend">
+                                    <i class="fas fa-exclamation-triangle me-1"></i> Подтверждаю отправку всем пользователям
+                                </label>
+                            </div>
+                            <div class="d-flex gap-2">
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="fas fa-paper-plane me-1"></i> Отправить
+                                </button>
+                                <button type="button" class="btn btn-outline-secondary" onclick="previewMessage()">
+                                    <i class="fas fa-eye me-1"></i> Предпросмотр
+                                </button>
+                                <button type="button" class="btn btn-outline-danger" onclick="clearMessage()">
+                                    <i class="fas fa-trash me-1"></i> Очистить
+                                </button>
+                            </div>
+                        </form>
+                        <hr class="my-4">
+                        <h4><i class="fas fa-clock me-2"></i>Запланированные рассылки</h4>
+                        <table class="table table-bordered table-sm table-hover mt-3">
+                            <thead>
+                                <tr>
+                                    <th>Текст</th>
+                                    <th>Фото</th>
+                                    <th>Время</th>
+                                    <th>Статус</th>
+                                    <th>Действия</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for msg in scheduled_messages %}
+                                <tr>
+                                    <td>{{ msg.message_text[:100] }}{% if msg.message_text|length > 100 %}...{% endif %}</td>
+                                    <td>
+                                        {% if msg.photo_url %}
+                                            <a href="{{ msg.photo_url }}" target="_blank" class="text-info"><i class="fas fa-image"></i></a>
+                                        {% else %}—{% endif %}
+                                    </td>
+                                    <td>{{ msg.scheduled_time.strftime('%d.%m.%Y %H:%M') if msg.scheduled_time else 'Сразу' }}</td>
+                                    <td>
+                                        {% if msg.sent %}
+                                            <span class="badge bg-success">Отправлено</span>
+                                        {% elif msg.is_pending() %}
+                                            <span class="badge bg-warning text-dark">Ожидает</span>
+                                        {% else %}
+                                            <span class="badge bg-danger">Просрочено</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if not msg.sent and msg.is_pending() %}
+                                            <a href="{{ url_for('edit_scheduled_message', message_id=msg.id) }}" class="btn btn-sm btn-outline-primary">Изменить</a>
+                                            <a href="{{ url_for('delete_scheduled_message', message_id=msg.id) }}" class="btn btn-sm btn-outline-danger" onclick="return confirm('Удалить сообщение?');">Удалить</a>
+                                        {% else %}—{% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Правая колонка -->
+            <div class="col-lg-4">
+                <div class="card mb-3">
+                    <div class="card-header"><i class="fas fa-lightbulb me-2"></i> Шаблоны сообщений</div>
+                    <div class="card-body">
+                        <div class="d-grid gap-2">
+                            <button class="btn btn-outline-primary btn-sm text-start" onclick="useTemplate('dance_start')">💃 Старт танцев</button>
+                            <button class="btn btn-outline-primary btn-sm text-start" onclick="useTemplate('quest_reminder')">🧩 Напоминание о квесте</button>
+                            <button class="btn btn-outline-primary btn-sm text-start" onclick="useTemplate('food_announcement')">🍔 Обед открыт</button>
+                            <button class="btn btn-outline-primary btn-sm text-start" onclick="useTemplate('closing_ceremony')">🎉 Закрытие фестиваля</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="card">
+                    <div class="card-header"><i class="fas fa-info-circle me-2"></i> Советы</div>
+                    <div class="card-body small">
+                        <ul class="list-unstyled mb-0">
+                            <li><i class="fas fa-check text-success me-2"></i> Используйте emoji и разметку</li>
+                            <li><i class="fas fa-check text-success me-2"></i> Не перегружайте текст</li>
+                            <li><i class="fas fa-check text-success me-2"></i> Проверяйте фото и текст перед отправкой</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Предпросмотр -->
+    <div class="modal fade" id="previewModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="fas fa-eye me-2"></i> Предпросмотр</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="card">
+                        <div class="card-header bg-primary text-white">
+                            <strong>ЧАТ-БОТ</strong> <span class="ms-auto small">📢 Рассылка</span>
+                        </div>
+                        <div class="card-body">
+                            <div id="previewContent" class="border-start border-primary border-3 ps-3"></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-secondary" data-bs-dismiss="modal">Закрыть</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Telegram Markdown/HTML mini-parser
+        function telegramParse(text) {
+            return text
+                .replace(/</g, '&lt;').replace(/>/g, '&gt;')
+                .replace(/\*\*(.+?)\*\*/g, '<b>$1</b>')
+                .replace(/\*(.+?)\*/g, '<i>$1</i>')
+                .replace(/`(.+?)`/g, '<code>$1</code>')
+                .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank">$1</a>')
+                .replace(/\n/g, '<br>');
+        }
+
+        function useTemplate(key) {
+            const templates = {
+                'dance_start': '💃 Танцы начинаются! Подходите к сцене — будет жарко! 🔥',
+                'quest_reminder': '🧩 Не забудьте пройти квест! Начало — зона "Маяк", призы ждут!',
+                'food_announcement': '🍔 Фуд-корт открыт! За еду и напитками — сюда.',
+                'closing_ceremony': '🎉 В 18:00 — церемония закрытия! Спасибо, что были с нами!'
+            };
+            const el = document.getElementById('message');
+            el.value = templates[key];
+            el.focus();
+        }
+
+        function previewMessage() {
+            const msg = document.getElementById('message').value;
+            if (!msg.trim()) return alert('Введите сообщение');
+            document.getElementById('previewContent').innerHTML = telegramParse(msg);
+            new bootstrap.Modal(document.getElementById('previewModal')).show();
+        }
+
+        function clearMessage() {
+            if (confirm('Очистить сообщение?')) {
+                document.getElementById('message').value = '';
+                document.getElementById('confirmSend').checked = false;
+                document.getElementById('photo').value = '';
+            }
+        }
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

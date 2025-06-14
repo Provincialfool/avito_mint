@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="ru" data-bs-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Участники — Админка ЧАТ-БОТА</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+        <div class="container">
+            <a class="navbar-brand" href="/"><i class="fas fa-robot me-2"></i>Админка ЧАТ-БОТА</a>
+            <div class="navbar-nav ms-auto">
+                <a class="nav-link" href="{{ url_for('index') }}"><i class="fas fa-tachometer-alt me-1"></i> Главная</a>
+                <a class="nav-link active" href="{{ url_for('participants') }}"><i class="fas fa-users me-1"></i> Участники</a>
+                <a class="nav-link" href="{{ url_for('broadcast') }}"><i class="fas fa-bullhorn me-1"></i> Рассылка</a>
+                <a class="nav-link" href="{{ url_for('export_csv') }}"><i class="fas fa-download me-1"></i> Экспорт CSV</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mt-4">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h1><i class="fas fa-users me-2"></i> Участники</h1>
+            <a href="{{ url_for('export_csv') }}" class="btn btn-outline-success">
+                <i class="fas fa-download me-1"></i> Экспорт CSV
+            </a>
+        </div>
+
+        <div class="card">
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle">
+                        <thead>
+                            <tr>
+                                <th>Telegram</th>
+                                <th>Имя и фамилия</th>
+                                <th>Компания</th>
+                                <th>Дата регистрации</th>
+                                <th>Профиль</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for user in users.items %}
+                            <tr>
+                                <td>
+                                    {% if user.username %}
+                                        <a href="https://t.me/{{ user.username }}" target="_blank">@{{ user.username }}</a>
+                                    {% else %}
+                                        <span class="text-muted">—</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {{ user.first_name or '' }} {{ user.last_name or '' }}
+                                </td>
+                                <td>
+                                    {{ user.company or '—' }}
+                                </td>
+                                <td>
+                                    <small class="text-muted">{{ user.created_at.strftime('%d.%m.%Y %H:%M') }}</small>
+                                </td>
+                                <td>
+                                    <a href="{{ url_for('user_detail', telegram_id=user.telegram_id) }}" class="btn btn-outline-primary btn-sm" title="Профиль">
+                                        <i class="fas fa-eye"></i>
+                                    </a>
+                                </td>
+                                <td>
+                                    <button class="btn btn-outline-danger btn-sm" title="Удалить" onclick="deleteUser('{{ user.telegram_id }}', '{{ user.first_name }} {{ user.last_name }}')">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Пагинация -->
+                {% if users.pages > 1 %}
+                <nav class="mt-4">
+                    <ul class="pagination justify-content-center">
+                        {% if users.has_prev %}
+                            <li class="page-item"><a class="page-link" href="{{ url_for('participants', page=users.prev_num) }}"><i class="fas fa-chevron-left"></i></a></li>
+                        {% endif %}
+                        {% for page_num in users.iter_pages() %}
+                            {% if page_num %}
+                                {% if page_num == users.page %}
+                                    <li class="page-item active"><span class="page-link">{{ page_num }}</span></li>
+                                {% else %}
+                                    <li class="page-item"><a class="page-link" href="{{ url_for('participants', page=page_num) }}">{{ page_num }}</a></li>
+                                {% endif %}
+                            {% else %}
+                                <li class="page-item disabled"><span class="page-link">…</span></li>
+                            {% endif %}
+                        {% endfor %}
+                        {% if users.has_next %}
+                            <li class="page-item"><a class="page-link" href="{{ url_for('participants', page=users.next_num) }}"><i class="fas fa-chevron-right"></i></a></li>
+                        {% endif %}
+                    </ul>
+                </nav>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Модалка подтверждения удаления -->
+    <div class="modal fade" id="deleteUserModal" tabindex="-1" aria-labelledby="deleteUserModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <form id="deleteUserForm">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="deleteUserModalLabel"><i class="fas fa-trash text-danger me-2"></i> Удалить пользователя?</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <p>Вы действительно хотите <strong>удалить пользователя</strong> <span id="deleteUserName"></span>?</p>
+                        <p class="text-danger"><strong>Это действие необратимо. Все данные пользователя будут удалены.</strong></p>
+                        <input type="hidden" id="deleteUserTelegramId" name="telegram_id">
+                    </div>
+                    <div class="modal-footer">
+                        <button class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+                        <button class="btn btn-danger" id="confirmDeleteBtn" type="submit"><i class="fas fa-trash me-1"></i> Удалить</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        let deleteModal;
+        document.addEventListener('DOMContentLoaded', () => {
+            deleteModal = new bootstrap.Modal(document.getElementById('deleteUserModal'));
+            document.getElementById('deleteUserForm').addEventListener('submit', function(e) {
+                e.preventDefault();
+                const telegramId = document.getElementById('deleteUserTelegramId').value;
+                fetch(`/user/delete/${telegramId}`, {
+                    method: 'POST',
+                    headers: {'X-Requested-With': 'XMLHttpRequest'},
+                })
+                .then(r => r.json())
+                .then(data => {
+                    deleteModal.hide();
+                    if (data.success) {
+                        alert('Пользователь удалён');
+                        location.reload();
+                    } else {
+                        alert('Ошибка: ' + (data.error || 'Не удалось удалить пользователя'));
+                    }
+                });
+            });
+        });
+
+        function deleteUser(telegramId, userName) {
+            document.getElementById('deleteUserTelegramId').value = telegramId;
+            document.getElementById('deleteUserName').textContent = userName;
+            deleteModal.show();
+        }
+    </script>
+</body>
+</html>
