@@ -1,0 +1,212 @@
+
+<!DOCTYPE html>
+<html lang="ru" data-bs-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Дашборд – Админка ЧАТ-БОТА</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .nav-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 1rem 0;
+        }
+        .stats-card {
+            background: rgba(33, 37, 41, 0.95);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: transform 0.3s ease;
+        }
+        .stats-card:hover {
+            transform: translateY(-2px);
+        }
+    </style>
+</head>
+<body>
+    <!-- Навигация -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark sticky-top">
+        <div class="container">
+            <a class="navbar-brand" href="/admin">
+                <i class="fas fa-robot me-2"></i> Админка ЧАТ-БОТА
+            </a>
+            <div class="navbar-nav ms-auto">
+                <a class="nav-link active" href="{{ url_for('index') }}"><i class="fas fa-tachometer-alt me-1"></i> Дашборд</a>
+                <a class="nav-link" href="{{ url_for('participants') }}"><i class="fas fa-users me-1"></i> Участники</a>
+                <a class="nav-link" href="{{ url_for('broadcast') }}"><i class="fas fa-bullhorn me-1"></i> Рассылка</a>
+                   <a class="nav-link" href="{{ url_for('dance_slots') }}"><i class="fas fa-music me-1"></i> Слоты</a>
+                <a class="nav-link" href="{{ url_for('text_messages') }}"><i class="fas fa-edit me-1"></i> Тексты</a>
+                <a class="nav-link" href="{{ url_for('config') }}"><i class="fas fa-cogs me-1"></i> Настройки</a>
+                <a class="nav-link" href="/admin/logout"><i class="fas fa-sign-out-alt me-1"></i> Выход</a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Заголовок -->
+    <div class="nav-header">
+        <div class="container">
+            <h1><i class="fas fa-tachometer-alt me-2"></i> Дашборд</h1>
+            <p class="mb-0">Общая статистика и мониторинг бота</p>
+        </div>
+    </div>
+
+    <div class="container mt-4">
+        <!-- Метрики -->
+        <div class="row mb-4">
+            <div class="col-md-3 mb-3">
+                <div class="card stats-card bg-primary text-white text-center">
+                    <div class="card-body">
+                        <i class="fas fa-users fa-2x mb-2"></i>
+                        <h3 class="card-title">{{ total_users }}</h3>
+                        <p class="card-text">Всего участников</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3 mb-3">
+                <div class="card stats-card bg-success text-white text-center">
+                    <div class="card-body">
+                        <i class="fas fa-bullhorn fa-2x mb-2"></i>
+                        <h3 class="card-title">{{ total_vacancy }}</h3>
+                        <p class="card-text">Маякнуло (карьера)</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3 mb-3">
+                <div class="card stats-card bg-warning text-dark text-center">
+                    <div class="card-body">
+                        <i class="fas fa-map-marked-alt fa-2x mb-2"></i>
+                        <h3 class="card-title">{{ total_quest_complete }}</h3>
+                        <p class="card-text">Закрыли квест</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3 mb-3">
+                <div class="card stats-card bg-info text-white text-center">
+                    <div class="card-body">
+                        <i class="fas fa-sticky-note fa-2x mb-2"></i>
+                        <h3 class="card-title">{{ total_stickers }}</h3>
+                        <p class="card-text">Создали стикеров</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Таблица: Танцы (слоты и записи) -->
+        <h2 class="mb-3"><i class="fas fa-music me-2"></i> Записи на танцы</h2>
+        <div class="card mb-4 stats-card">
+            <div class="card-body table-responsive">
+                {% if dance_slots %}
+                    <table class="table table-sm table-dark table-bordered align-middle mb-0">
+                        <thead>
+                            <tr>
+                                <th>Слот</th>
+                                <th>Участники</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        {% for slot in dance_slots %}
+                            <tr>
+                                <td><strong>{{ slot.day }} {{ slot.time_slot }}</strong></td>
+                                <td>
+                                    {% if slot.users %}
+                                        <ul class="mb-0 list-unstyled">
+                                            {% for user in slot.users %}
+                                                <li>
+                                                    <a href="{{ url_for('user_detail', telegram_id=user.telegram_id) }}">
+                                                        {{ user.first_name }} {{ user.last_name or '' }}
+                                                    </a>
+                                                    {% if user.username %}<span class="text-muted">(@{{ user.username }})</span>{% endif %}
+                                                </li>
+                                            {% endfor %}
+                                        </ul>
+                                    {% else %}
+                                        <span class="text-muted">Нет записей</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                        {% endfor %}
+                        </tbody>
+                    </table>
+                {% else %}
+                    <div class="text-center text-muted">Нет записей на танцы</div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Таблица: кто прошёл квест -->
+        <h2 class="mb-3"><i class="fas fa-flag-checkered me-2"></i> Прошли квест: {{ total_quest_complete }}</h2>
+        <div class="card mb-4 stats-card">
+            <div class="card-body table-responsive">
+                <table class="table table-sm table-dark table-bordered align-middle mb-0">
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Имя</th>
+                            <th>Username</th>
+                            <th>Время завершения</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for q, user in recent_quest_winners %}
+                        <tr>
+                            <td>{{ loop.index }}</td>
+                            <td>
+                                <a href="{{ url_for('user_detail', telegram_id=user.telegram_id) }}">
+                                    {{ user.first_name }} {{ user.last_name or '' }}
+                                </a>
+                            </td>
+                            <td>
+                                {% if user.username %}@{{ user.username }}{% else %}<span class="text-muted">—</span>{% endif %}
+                            </td>
+                            <td><small>{{ q.completed_at.strftime('%d.%m %H:%M') }}</small></td>
+                        </tr>
+                        {% endfor %}
+                        {% if recent_quest_winners|length == 0 %}
+                        <tr><td colspan="4" class="text-center text-muted">Пока никто не прошёл квест</td></tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Таблица: последние стикеры -->
+        <h2 class="mb-3"><i class="fas fa-sticky-note me-2"></i> Последние стикеры</h2>
+        <div class="card mb-4 stats-card">
+            <div class="card-body table-responsive">
+                <table class="table table-sm table-dark table-bordered align-middle mb-0">
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Имя</th>
+                            <th>Username</th>
+                            <th>Дата генерации</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for sticker, user in recent_stickers %}
+                        <tr>
+                            <td>{{ loop.index }}</td>
+                            <td>
+                                <a href="{{ url_for('user_detail', telegram_id=user.telegram_id) }}">
+                                    {{ user.first_name }} {{ user.last_name or '' }}
+                                </a>
+                            </td>
+                            <td>
+                                {% if user.username %}@{{ user.username }}{% else %}<span class="text-muted">—</span>{% endif %}
+                            </td>
+                            <td><small>{{ sticker.created_at.strftime('%d.%m %H:%M') }}</small></td>
+                        </tr>
+                        {% endfor %}
+                        {% if recent_stickers|length == 0 %}
+                        <tr><td colspan="4" class="text-center text-muted">Стикеров ещё не создано</td></tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

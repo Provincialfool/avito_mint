@@ -1,0 +1,267 @@
+
+<!DOCTYPE html>
+<html lang="ru" data-bs-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <title>Профиль пользователя – Админка ЧАТ-БОТА</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .nav-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 1rem 0;
+        }
+        .stats-card {
+            background: rgba(33, 37, 41, 0.95);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+    </style>
+</head>
+<body>
+    <!-- Навигация -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark sticky-top">
+        <div class="container">
+            <a class="navbar-brand" href="/admin">
+                <i class="fas fa-robot me-2"></i> Админка ЧАТ-БОТА
+            </a>
+            <div class="navbar-nav ms-auto">
+                <a class="nav-link" href="{{ url_for('index') }}"><i class="fas fa-tachometer-alt me-1"></i> Дашборд</a>
+                  <a class="nav-link" href="{{ url_for('participants') }}"><i class="fas fa-users me-1"></i> Участники</a>
+                    <a class="nav-link" href="{{ url_for('broadcast') }}"><i class="fas fa-bullhorn me-1"></i> Рассылка</a>
+                       <a class="nav-link" href="{{ url_for('dance_slots') }}"><i class="fas fa-music me-1"></i> Слоты</a>
+                    <a class="nav-link" href="{{ url_for('text_messages') }}"><i class="fas fa-edit me-1"></i> Тексты</a>
+                    <a class="nav-link" href="{{ url_for('config') }}"><i class="fas fa-cogs me-1"></i> Настройки</a>
+                    <a class="nav-link" href="/admin/logout"><i class="fas fa-sign-out-alt me-1"></i> Выход</a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Заголовок -->
+    <div class="nav-header">
+        <div class="container">
+            <h1><i class="fas fa-user me-2"></i> Профиль пользователя</h1>
+            <p class="mb-0">{{ user.first_name }} {{ user.last_name or '' }}</p>
+        </div>
+    </div>
+
+    <div class="container mt-4">
+        <!-- Основная информация -->
+        <div class="card stats-card mb-4">
+            <div class="card-body">
+                <h5 class="card-title">
+                    {{ user.first_name }} {{ user.last_name or '' }}
+                    {% if user.is_admin %}
+                        <span class="badge bg-warning text-dark ms-2">Администратор</span>
+                    {% endif %}
+                </h5>
+                <p class="card-text mb-1"><strong>Username:</strong>
+                    {% if user.username %}
+                        <a href="https://t.me/{{ user.username }}" target="_blank">@{{ user.username }}</a>
+                    {% else %}
+                        <span class="text-muted">—</span>
+                    {% endif %}
+                </p>
+                <p class="card-text mb-1"><strong>Telegram ID:</strong> <code>{{ user.telegram_id }}</code></p>
+                <p class="card-text mb-1"><strong>Дата регистрации:</strong> {{ user.created_at.strftime('%d.%m.%Y %H:%M') }}</p>
+                <p class="card-text mb-1"><strong>Согласие на обработку ПД:</strong>
+                    {% if user.consent_given %}
+                        <span class="badge bg-success">Дано</span>
+                    {% else %}
+                        <span class="badge bg-secondary">Нет</span>
+                    {% endif %}
+                </p>
+                <p class="card-text mb-1"><strong>Опрос завершён:</strong>
+                    {% if user.survey_completed %}
+                        <span class="badge bg-success">Да</span>
+                    {% else %}
+                        <span class="badge bg-secondary">Нет</span>
+                    {% endif %}
+                </p>
+                <p class="card-text mb-1"><strong>Мякнул на карьеру:</strong>
+                    {% if user.interested_in_vacancies %}
+                        <span class="badge bg-info">Да</span>
+                    {% else %}
+                        <span class="badge bg-secondary">Нет</span>
+                    {% endif %}
+                </p>
+            </div>
+        </div>
+
+        <!-- Анкета -->
+        <div class="card stats-card mb-4">
+            <div class="card-header bg-light text-dark">
+                <h5 class="mb-0"><i class="fas fa-address-card me-2"></i> Анкета</h5>
+            </div>
+            <div class="card-body">
+                {% set survey_data = user.get_survey_data() %}
+                <ul class="list-group list-group-flush">
+                    <li class="list-group-item"><strong>ФИО:</strong> {{ survey_data.get('full_name', user.full_name or '—') }}</li>
+                    <li class="list-group-item"><strong>Город:</strong> {{ survey_data.get('city', user.city or '—') }}</li>
+                    <li class="list-group-item"><strong>Проф. роль:</strong> {{ survey_data.get('professional_role', user.professional_role or '—') }}</li>
+                    <li class="list-group-item"><strong>Компания:</strong> {{ survey_data.get('company', user.company or '—') }}</li>
+                    <li class="list-group-item"><strong>Интерес к вакансиям:</strong> {{ survey_data.get('vacancy_interest', '—') }}</li>
+                </ul>
+                
+                
+            </div>
+        </div>
+
+        <div class="row">
+            <!-- Регистрации на активности -->
+            <div class="col-md-6">
+                <div class="card stats-card mb-4">
+                    <div class="card-header bg-info">
+                        <h5 class="mb-0"><i class="fas fa-calendar-check me-2"></i> Записи на активности</h5>
+                    </div>
+                    <div class="card-body">
+                        {% if registrations %}
+                            <ul class="list-group">
+                                {% for reg in registrations %}
+                                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                                        {{ reg.activity_type.title() }} — {{ reg.day }} {{ reg.time_slot }}
+                                        <span class="badge bg-secondary">{{ reg.created_at.strftime('%d.%m %H:%M') }}</span>
+                                    </li>
+                                {% endfor %}
+                            </ul>
+                        {% else %}
+                            <p class="text-muted">Нет регистраций.</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Квест -->
+            <div class="col-md-6">
+                <div class="card stats-card mb-4">
+                    <div class="card-header bg-success">
+                        <h5 class="mb-0"><i class="fas fa-trophy me-2"></i> Прогресс квеста</h5>
+                    </div>
+                    <div class="card-body">
+                        {% if quest_progress %}
+                            <p><strong>Статус:</strong>
+                                {% if quest_progress.completed %}
+                                    <span class="badge bg-success">Завершён</span>
+                                {% else %}
+                                    <span class="badge bg-warning text-dark">В процессе</span>
+                                {% endif %}
+                            </p>
+                            <p><strong>Последнее обновление:</strong> {{ quest_progress.created_at.strftime('%d.%m.%Y %H:%M') }}</p>
+                            {% if quest_progress.completed_steps %}
+                                {% set steps_data = quest_progress.completed_steps|from_json %}
+                                {% if steps_data %}
+                                    {% set valid_steps = steps_data|selectattr('number')|list %}
+                                    <p><strong>Найдено стикеров:</strong> {{ valid_steps|length }} / 9</p>
+                                    <p><strong>Шаги:</strong> {{ steps_data|join(', ') }}</p>
+                                {% else %}
+                                    <p><strong>Найдено стикеров:</strong> 0 / 9</p>
+                                {% endif %}
+                            {% endif %}
+                        {% else %}
+                            <p class="text-muted">Нет данных о квестах.</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Фидбек -->
+        <div class="card stats-card mb-4">
+            <div class="card-header bg-info">
+                <h5 class="mb-0"><i class="fas fa-star me-2"></i> Фидбек</h5>
+            </div>
+            <div class="card-body">
+                {% set feedback_answers = user.feedback_answers %}
+                {% if feedback_answers %}
+                    <ul class="list-group">
+                        {% for feedback in feedback_answers %}
+                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                <div>
+                                    <strong>
+                                        {% if feedback.question_id == 'activity_rating' %}
+                                            Оценка активностей
+                                        {% elif feedback.question_id == 'team_knowledge' %}
+                                            Знание команды
+                                        {% elif feedback.question_id == 'recommend_work' %}
+                                            Рекомендация работы
+                                        {% elif feedback.question_id == 'self_apply' %}
+                                            Собственный отклик
+                                        {% else %}
+                                            {{ feedback.question_id }}
+                                        {% endif %}
+                                    </strong><br>
+                                    <small class="text-muted">{{ feedback.created_at.strftime('%d.%m.%Y %H:%M') }}</small>
+                                </div>
+                                <span class="badge bg-primary">{{ feedback.answer }}</span>
+                            </li>
+                        {% endfor %}
+                    </ul>
+                {% else %}
+                    <p class="text-muted">Фидбек не оставлен.</p>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Стикеры -->
+        <div class="card stats-card mb-4">
+            <div class="card-header bg-warning text-dark">
+                <h5 class="mb-0"><i class="fas fa-image me-2"></i> Стикеры</h5>
+            </div>
+            <div class="card-body">
+                {% if stickers %}
+                    {% for sticker in stickers %}
+                        <div class="card mb-3">
+                            <div class="card-body">
+                                <div class="row align-items-center">
+                                    <div class="col-md-8">
+                                        <h6 class="card-title">
+                                            <i class="fas fa-sticker-mule me-2"></i>
+                                            Стикерпак {{ sticker.template_used or 'avito_team' }}
+                                        </h6>
+                                        <p class="card-text">
+                                            <small class="text-muted">
+                                                Создан: {{ sticker.created_at.strftime('%d.%m.%Y %H:%M') }}<br>
+                                                Статус: 
+                                                {% if sticker.status == 'ok' %}
+                                                    <span class="badge bg-success">Готов</span>
+                                                {% else %}
+                                                    <span class="badge bg-warning">{{ sticker.status }}</span>
+                                                {% endif %}
+                                            </small>
+                                        </p>
+                                    </div>
+                                    <div class="col-md-4 text-end">
+                                        {% if sticker.sticker_set_link and sticker.status == 'ok' %}
+                                            <a href="{{ sticker.sticker_set_link }}" target="_blank" class="btn btn-primary btn-sm">
+                                                <i class="fas fa-external-link-alt me-1"></i>Открыть стикерпак
+                                            </a>
+                                        {% elif sticker.pack_url %}
+                                            <a href="{{ sticker.pack_url }}" target="_blank" class="btn btn-primary btn-sm">
+                                                <i class="fas fa-external-link-alt me-1"></i>Открыть стикерпак
+                                            </a>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                {% if sticker.sticker_set_name %}
+                                    <p class="card-text">
+                                        <small class="text-muted">Имя стикерпака: <code>{{ sticker.sticker_set_name }}</code></small>
+                                    </p>
+                                {% endif %}
+                            </div>
+                        </div>
+                    {% endfor %}
+                {% else %}
+                    <p class="text-muted">Стикеры не найдены.</p>
+                {% endif %}
+            </div>
+        </div>
+
+        <a href="{{ url_for('participants') }}" class="btn btn-outline-secondary mt-3">
+            <i class="fas fa-arrow-left me-1"></i> Назад к списку
+        </a>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

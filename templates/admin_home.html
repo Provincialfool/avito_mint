@@ -1,0 +1,201 @@
+
+<!DOCTYPE html>
+<html lang="ru" data-bs-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Админка ЧАТ-БОТА</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .hero-section {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 4rem 0;
+        }
+        .nav-card {
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            border: none;
+            background: rgba(33, 37, 41, 0.95);
+            backdrop-filter: blur(10px);
+        }
+        .nav-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+        }
+        .nav-icon {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+        }
+        .stats-card {
+            background: rgba(33, 37, 41, 0.95);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+    </style>
+</head>
+<body>
+    <!-- Навигация -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark sticky-top">
+        <div class="container">
+            <a class="navbar-brand" href="/admin">
+                <i class="fas fa-robot me-2"></i> Админка ЧАТ-БОТА
+            </a>
+            <div class="navbar-nav ms-auto">
+                <a class="nav-link" href="/admin/logout">
+                    <i class="fas fa-sign-out-alt me-1"></i> Выход
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Заголовок -->
+    <div class="hero-section">
+        <div class="container text-center">
+            <h1 class="display-4 mb-3">
+                <i class="fas fa-robot me-3"></i>
+                Панель управления ботом
+            </h1>
+            <p class="lead">Дикая Мята 2025 • Avito Team</p>
+            <div class="row mt-4">
+                <div class="col-md-3 mb-3">
+                    <div class="stats-card card text-center">
+                        <div class="card-body">
+                            <i class="fas fa-users text-primary fa-2x mb-2"></i>
+                            <h3>{{ stats.total_users }}</h3>
+                            <small>Участников</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3 mb-3">
+                    <div class="stats-card card text-center">
+                        <div class="card-body">
+                            <i class="fas fa-flag-checkered text-success fa-2x mb-2"></i>
+                            <h3>{{ stats.quest_completed }}</h3>
+                            <small>Прошли квест</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3 mb-3">
+                    <div class="stats-card card text-center">
+                        <div class="card-body">
+                            <i class="fas fa-music text-warning fa-2x mb-2"></i>
+                            <h3>{{ stats.dance_registered }}</h3>
+                            <small>Записались на танцы</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3 mb-3">
+                    <div class="stats-card card text-center">
+                        <div class="card-body">
+                            <i class="fas fa-sticky-note text-info fa-2x mb-2"></i>
+                            <h3>{{ stats.stickers_generated }}</h3>
+                            <small>Создали стикеры</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Навигационные карточки -->
+    <div class="container mt-5 mb-5">
+        <div class="row">
+            <div class="col-lg-3 col-md-6 mb-4">
+                <a href="{{ url_for('index') }}" class="text-decoration-none">
+                    <div class="card nav-card h-100 text-center">
+                        <div class="card-body p-4">
+                            <i class="fas fa-tachometer-alt nav-icon text-primary"></i>
+                            <h5 class="card-title">Дашборд</h5>
+                            <p class="card-text text-muted">Общая статистика и мониторинг</p>
+                        </div>
+                    </div>
+                </a>
+            </div>
+            
+            <div class="col-lg-3 col-md-6 mb-4">
+                <a href="{{ url_for('participants') }}" class="text-decoration-none">
+                    <div class="card nav-card h-100 text-center">
+                        <div class="card-body p-4">
+                            <i class="fas fa-users nav-icon text-success"></i>
+                            <h5 class="card-title">Участники</h5>
+                            <p class="card-text text-muted">Управление пользователями</p>
+                        </div>
+                    </div>
+                </a>
+            </div>
+            
+            <div class="col-lg-3 col-md-6 mb-4">
+                <a href="{{ url_for('broadcast') }}" class="text-decoration-none">
+                    <div class="card nav-card h-100 text-center">
+                        <div class="card-body p-4">
+                            <i class="fas fa-bullhorn nav-icon text-warning"></i>
+                            <h5 class="card-title">Рассылки</h5>
+                            <p class="card-text text-muted">Отправка сообщений</p>
+                        </div>
+                    </div>
+                </a>
+            </div>
+            
+            <div class="col-lg-3 col-md-6 mb-4">
+                <a href="{{ url_for('config') }}" class="text-decoration-none">
+                    <div class="card nav-card h-100 text-center">
+                        <div class="card-body p-4">
+                            <i class="fas fa-cogs nav-icon text-info"></i>
+                            <h5 class="card-title">Настройки</h5>
+                            <p class="card-text text-muted">Конфигурация бота</p>
+                        </div>
+                    </div>
+                </a>
+            </div>
+            
+            <div class="col-lg-3 col-md-6 mb-4">
+                <a href="{{ url_for('text_messages') }}" class="text-decoration-none">
+                    <div class="card nav-card h-100 text-center">
+                        <div class="card-body p-4">
+                            <i class="fas fa-edit nav-icon text-purple"></i>
+                            <h5 class="card-title">Тексты</h5>
+                            <p class="card-text text-muted">Редактирование сообщений</p>
+                        </div>
+                    </div>
+                </a>
+            </div>
+            
+            <div class="col-lg-3 col-md-6 mb-4">
+                <a href="{{ url_for('dance_slots') }}" class="text-decoration-none">
+                    <div class="card nav-card h-100 text-center">
+                        <div class="card-body p-4">
+                            <i class="fas fa-music nav-icon text-danger"></i>
+                            <h5 class="card-title">Танцы</h5>
+                            <p class="card-text text-muted">Управление слотами</p>
+                        </div>
+                    </div>
+                </a>
+            </div>
+            
+            <div class="col-lg-3 col-md-6 mb-4">
+                <div class="card nav-card h-100 text-center">
+                    <div class="card-body p-4">
+                        <i class="fas fa-chart-line nav-icon text-secondary"></i>
+                        <h5 class="card-title">Аналитика</h5>
+                        <p class="card-text text-muted">Скоро...</p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-lg-3 col-md-6 mb-4">
+                <div class="card nav-card h-100 text-center">
+                    <div class="card-body p-4">
+                        <i class="fas fa-download nav-icon text-light"></i>
+                        <h5 class="card-title">Экспорт</h5>
+                        <p class="card-text text-muted">
+                            <a href="{{ url_for('export_csv') }}" class="btn btn-sm btn-outline-light">CSV</a>
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

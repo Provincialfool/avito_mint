@@ -1,0 +1,534 @@
+
+<!DOCTYPE html>
+<html lang="ru" data-bs-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Редактирование текстов</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .telegram-help {
+            background: rgba(33, 37, 41, 0.8);
+            border-left: 4px solid #0088cc;
+            padding: 1rem;
+            margin-bottom: 1rem;
+        }
+        .text-editor {
+            font-family: 'Courier New', monospace;
+            background: #1a1d23;
+            border: 1px solid #495057;
+            color: #fff;
+        }
+        .preview-box {
+            background: #2d3748;
+            border: 1px solid #4a5568;
+            padding: 1rem;
+            border-radius: 0.375rem;
+            min-height: 100px;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+        .nav-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 1rem 0;
+        }
+        .import-buttons {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            margin: 2rem 0;
+        }
+        .image-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 1rem;
+        }
+        .image-card {
+            background: #2d3748;
+            border: 1px solid #4a5568;
+            border-radius: 0.375rem;
+            padding: 1rem;
+            text-align: center;
+        }
+        .image-preview {
+            width: 100%;
+            max-width: 150px;
+            height: 100px;
+            object-fit: cover;
+            border-radius: 0.25rem;
+            margin-bottom: 0.5rem;
+        }
+    </style>
+</head>
+<body>
+    <!-- Навигация -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark sticky-top">
+        <div class="container">
+            <a class="navbar-brand" href="/admin">
+                <i class="fas fa-robot me-2"></i> Админка ЧАТ-БОТА
+            </a>
+            <div class="navbar-nav ms-auto">
+                <a class="nav-link" href="{{ url_for('index') }}"><i class="fas fa-tachometer-alt me-1"></i> Дашборд</a>
+                  <a class="nav-link" href="{{ url_for('participants') }}"><i class="fas fa-users me-1"></i> Участники</a>
+                    <a class="nav-link" href="{{ url_for('broadcast') }}"><i class="fas fa-bullhorn me-1"></i> Рассылка</a>
+                       <a class="nav-link" href="{{ url_for('dance_slots') }}"><i class="fas fa-music me-1"></i> Слоты</a>
+                    <a class="nav-link" href="{{ url_for('text_messages') }}"><i class="fas fa-edit me-1"></i> Тексты</a>
+                    <a class="nav-link" href="{{ url_for('config') }}"><i class="fas fa-cogs me-1"></i> Настройки</a>
+                    <a class="nav-link" href="/admin/logout"><i class="fas fa-sign-out-alt me-1"></i> Выход</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="nav-header">
+        <div class="container">
+            <h1><i class="fas fa-edit me-2"></i> Редактирование текстов</h1>
+            <p class="mb-0">Управление текстовыми сообщениями бота</p>
+        </div>
+    </div>
+
+    <div class="container mt-4">
+        <!-- Справка по Telegram разметке -->
+        <div class="telegram-help">
+            <h6><i class="fab fa-telegram me-2"></i> Поддержка Telegram разметки:</h6>
+            <div class="row">
+                <div class="col-md-6">
+                    <small>
+                        <strong>*курсив*</strong> → <em>курсив</em><br>
+                        <strong>**жирный**</strong> → <strong>жирный</strong><br>
+                        <strong>`код`</strong> → <code>код</code>
+                    </small>
+                </div>
+                <div class="col-md-6">
+                    <small>
+                        <strong>[ссылка](https://...)</strong> → <a href="#">ссылка</a><br>
+                        <strong>&lt;b&gt;жирный&lt;/b&gt;</strong> → <strong>жирный</strong><br>
+                        <strong>&lt;i&gt;курсив&lt;/i&gt;</strong> → <em>курсив</em>
+                    </small>
+                </div>
+            </div>
+        </div>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ 'danger' if category == 'error' else category }} alert-dismissible fade show">
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        <!-- Вкладки -->
+        <ul class="nav nav-tabs" id="textTabs" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active" id="main-tab" data-bs-toggle="tab" data-bs-target="#main" type="button">
+                    <i class="fas fa-home me-1"></i> Основные блоки
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="activities-tab" data-bs-toggle="tab" data-bs-target="#activities" type="button">
+                    <i class="fas fa-gamepad me-1"></i> Активности
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="survey-tab" data-bs-toggle="tab" data-bs-target="#survey" type="button">
+                    <i class="fas fa-poll me-1"></i> Опрос
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="quest-tab" data-bs-toggle="tab" data-bs-target="#quest" type="button">
+                    <i class="fas fa-map-marked-alt me-1"></i> Квест
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="images-tab" data-bs-toggle="tab" data-bs-target="#images" type="button">
+                    <i class="fas fa-image me-1"></i> Изображения
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="import-tab" data-bs-toggle="tab" data-bs-target="#import" type="button">
+                    <i class="fas fa-download me-1"></i> Импорт
+                </button>
+            </li>
+        </ul>
+
+        <div class="tab-content" id="textTabsContent">
+            <!-- Основные блоки -->
+            <div class="tab-pane fade show active" id="main" role="tabpanel">
+                <div class="mt-4">
+                    {% for message in main_messages %}
+                    <div class="card mb-3">
+                        <div class="card-header">
+                            <h6 class="mb-0">{{ message.title }}</h6>
+                            <small class="text-muted">{{ message.description }}</small>
+                        </div>
+                        <div class="card-body">
+                            <form method="POST" action="{{ url_for('update_text_message') }}" class="text-form">
+                                <input type="hidden" name="message_key" value="{{ message.key }}">
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <label class="form-label">Текст сообщения:</label>
+                                        <textarea 
+                                            name="message_text" 
+                                            class="form-control text-editor" 
+                                            rows="8" 
+                                            onkeyup="updatePreview(this)"
+                                            placeholder="Введите текст сообщения..."
+                                        >{{ message.text }}</textarea>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label">Предварительный просмотр:</label>
+                                        <div class="preview-box" id="preview_{{ message.key }}">
+                                            {{ message.text|safe }}
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="mt-3">
+                                    <button type="submit" class="btn btn-primary">
+                                        <i class="fas fa-save me-1"></i> Сохранить
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <!-- Активности -->
+            <div class="tab-pane fade" id="activities" role="tabpanel">
+                <div class="mt-4">
+                    {% for message in activity_messages %}
+                    <div class="card mb-3">
+                        <div class="card-header">
+                            <h6 class="mb-0">{{ message.title }}</h6>
+                            <small class="text-muted">{{ message.description }}</small>
+                        </div>
+                        <div class="card-body">
+                            <form method="POST" action="{{ url_for('update_text_message') }}" class="text-form">
+                                <input type="hidden" name="message_key" value="{{ message.key }}">
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <label class="form-label">Текст сообщения:</label>
+                                        <textarea 
+                                            name="message_text" 
+                                            class="form-control text-editor" 
+                                            rows="6" 
+                                            onkeyup="updatePreview(this)"
+                                            placeholder="Введите текст сообщения..."
+                                        >{{ message.text }}</textarea>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label">Предварительный просмотр:</label>
+                                        <div class="preview-box" id="preview_{{ message.key }}">
+                                            {{ message.text|safe }}
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="mt-3">
+                                    <button type="submit" class="btn btn-primary">
+                                        <i class="fas fa-save me-1"></i> Сохранить
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <!-- Опрос -->
+            <div class="tab-pane fade" id="survey" role="tabpanel">
+                <div class="mt-4">
+                    <!-- Переключатель опроса -->
+                    <div class="card mb-3">
+                        <div class="card-header">
+                            <h6 class="mb-0"><i class="fas fa-toggle-on me-2"></i> Настройки опроса</h6>
+                        </div>
+                        <div class="card-body">
+                            <form method="POST" action="{{ url_for('toggle_survey') }}" class="d-inline">
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" id="surveyEnabled" 
+                                           onchange="this.form.submit()" 
+                                           {% if survey_enabled %}checked{% endif %}>
+                                    <label class="form-check-label" for="surveyEnabled">
+                                        <strong>Опрос включен</strong>
+                                    </label>
+                                </div>
+                                <small class="text-muted">
+                                    Если отключить, новые пользователи будут попадать сразу в главное меню после согласия на обработку данных
+                                </small>
+                            </form>
+                        </div>
+                    </div>
+                    
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="mb-0"><i class="fas fa-poll me-2"></i> Вопросы опроса</h5>
+                        </div>
+                        <div class="card-body">
+                            <form method="POST" action="{{ url_for('update_survey_questions') }}">
+                                {% for i in range(5) %}
+                                <div class="mb-4">
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <label class="form-label">Вопрос {{ i + 1 }}:</label>
+                                            <textarea 
+                                                name="question_{{ i }}" 
+                                                class="form-control text-editor" 
+                                                rows="3" 
+                                                onkeyup="updateSurveyPreview(this, {{ i }})"
+                                                placeholder="Введите вопрос {{ i + 1 }}..."
+                                            >{{ survey_questions[i] if i < survey_questions|length else '' }}</textarea>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label class="form-label">Предварительный просмотр:</label>
+                                            <div class="preview-box" id="survey_preview_{{ i }}">
+                                                {{ survey_questions[i] if i < survey_questions|length else '' }}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                                <button type="submit" class="btn btn-success">
+                                    <i class="fas fa-save me-1"></i> Сохранить все вопросы
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Квест -->
+            <div class="tab-pane fade" id="quest" role="tabpanel">
+                <div class="mt-4">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="mb-0"><i class="fas fa-map-marked-alt me-2"></i> Шаги квеста</h5>
+                        </div>
+                        <div class="card-body">
+                            <form method="POST" action="{{ url_for('update_quest_steps') }}">
+                                {% for step in quest_steps %}
+                                <div class="card mb-3">
+                                    <div class="card-header">
+                                        <h6 class="mb-0">{{ step.title }}</h6>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="row">
+                                            <div class="col-md-6">
+                                                <div class="mb-3">
+                                                    <label for="quest_step_{{ step.step }}_hint" class="form-label">Текст подсказки</label>
+                                                    <textarea 
+                                                        class="form-control text-editor" 
+                                                        id="quest_step_{{ step.step }}_hint" 
+                                                        name="quest_step_{{ step.step }}_hint" 
+                                                        rows="4"
+                                                        onkeyup="updateQuestPreview(this, {{ step.step }})"
+                                                    >{{ step.hint }}</textarea>
+                                                </div>
+                                                <div class="mb-3">
+                                                    <label for="quest_step_{{ step.step }}_image" class="form-label">Путь к изображению</label>
+                                                    <input type="text" class="form-control" id="quest_step_{{ step.step }}_image" name="quest_step_{{ step.step }}_image" value="{{ step.image }}">
+                                                </div>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <label class="form-label">Предварительный просмотр:</label>
+                                                <div class="preview-box" id="quest_preview_{{ step.step }}">
+                                                    {{ step.hint }}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="fas fa-save me-2"></i>Сохранить квест
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Изображения -->
+            <div class="tab-pane fade" id="images" role="tabpanel">
+                <div class="mt-4">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="mb-0"><i class="fas fa-image me-2"></i> Управление изображениями</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-8">
+                                    <h6>Текущие изображения:</h6>
+                                    <div class="image-grid">
+                                        <div class="image-card">
+                                            <img src="/img/map.png" alt="Карта" class="image-preview" onerror="this.style.display='none'">
+                                            <div><strong>map.png</strong></div>
+                                            <small class="text-muted">Карта фестиваля</small>
+                                        </div>
+                                        <div class="image-card">
+                                            <img src="/img/workshop.jpeg" alt="Мастер-класс" class="image-preview" onerror="this.style.display='none'">
+                                            <div><strong>workshop.jpeg</strong></div>
+                                            <small class="text-muted">Мастер-класс</small>
+                                        </div>
+                                        <div class="image-card">
+                                            <img src="/img/dance.jpeg" alt="Танцы" class="image-preview" onerror="this.style.display='none'">
+                                            <div><strong>dance.jpeg</strong></div>
+                                            <small class="text-muted">Танцы</small>
+                                        </div>
+                                        <div class="image-card">
+                                            <img src="/img/forest.jpeg" alt="Лес" class="image-preview" onerror="this.style.display='none'">
+                                            <div><strong>forest.jpeg</strong></div>
+                                            <small class="text-muted">Лес</small>
+                                        </div>
+                                        <div class="image-card">
+                                            <img src="/img/quest.jpeg" alt="Квест" class="image-preview" onerror="this.style.display='none'">
+                                            <div><strong>quest.jpeg</strong></div>
+                                            <small class="text-muted">Квест</small>
+                                        </div>
+                                        <div class="image-card">
+                                            <img src="/img/background.png" alt="Фон стикера" class="image-preview" onerror="this.style.display='none'">
+                                            <div><strong>background.png</strong></div>
+                                            <small class="text-muted">Фон стикера</small>
+                                        </div>
+                                        <div class="image-card">
+                                            <img src="/img/shildik.png" alt="Шильдик" class="image-preview" onerror="this.style.display='none'">
+                                            <div><strong>shildik.png</strong></div>
+                                            <small class="text-muted">Шильдик</small>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <h6>Загрузить новое изображение:</h6>
+                                    <form method="POST" action="{{ url_for('upload_image') }}" enctype="multipart/form-data">
+                                        <div class="mb-3">
+                                            <select name="image_type" class="form-select" required>
+                                                <option value="">Выберите тип изображения</option>
+                                                <option value="map">Карта (map.png)</option>
+                                                <option value="workshop">Мастер-класс (workshop.jpeg)</option>
+                                                <option value="dance">Танцы (dance.jpeg)</option>
+                                                <option value="forest">Лес (forest.jpeg)</option>
+                                                <option value="quest">Квест (quest.jpeg)</option>
+                                                <option value="background">Фон стикера (background.png)</option>
+                                                <option value="shildik">Шильдик (shildik.png)</option>
+                                            </select>
+                                        </div>
+                                        <div class="mb-3">
+                                            <input type="file" name="image_file" class="form-control" accept="image/*" required>
+                                        </div>
+                                        <button type="submit" class="btn btn-secondary">
+                                            <i class="fas fa-upload me-2"></i> Загрузить
+                                        </button>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Импорт -->
+            <div class="tab-pane fade" id="import" role="tabpanel">
+                <div class="mt-4">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="mb-0"><i class="fas fa-download me-2"></i> Импорт данных</h5>
+                        </div>
+                        <div class="card-body text-center">
+                            <p class="mb-4">Загрузить тексты из файлов конфигурации в базу данных</p>
+                            
+                            <div class="import-buttons">
+                                <form method="POST" action="{{ url_for('import_from_text_py') }}" style="display: inline;">
+                                    <button type="submit" class="btn btn-warning btn-lg" onclick="return confirm('Это перезапишет все текущие настройки текстов. Продолжить?')">
+                                        <i class="fas fa-file-alt me-2"></i> Импорт из text.py
+                                    </button>
+                                </form>
+                                
+                                <form method="POST" action="{{ url_for('import_from_quest_py') }}" style="display: inline;">
+                                    <button type="submit" class="btn btn-info btn-lg" onclick="return confirm('Это перезапишет все настройки квеста. Продолжить?')">
+                                        <i class="fas fa-map-marked-alt me-2"></i> Импорт из quest.py
+                                    </button>
+                                </form>
+                            </div>
+                            
+                            <div class="mt-4">
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="card bg-dark border-warning">
+                                            <div class="card-body">
+                                                <h6 class="card-title text-warning">text.py</h6>
+                                                <p class="card-text">Основные тексты, сообщения активностей, вопросы опроса</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="card bg-dark border-info">
+                                            <div class="card-body">
+                                                <h6 class="card-title text-info">quest.py</h6>
+                                                <p class="card-text">Подсказки квеста, пути к изображениям шагов</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        function updatePreview(textarea) {
+            const key = textarea.closest('form').querySelector('input[name="message_key"]').value;
+            const previewDiv = document.getElementById('preview_' + key);
+            updatePreviewContent(textarea.value, previewDiv);
+        }
+
+        function updateSurveyPreview(textarea, index) {
+            const previewDiv = document.getElementById('survey_preview_' + index);
+            updatePreviewContent(textarea.value, previewDiv);
+        }
+
+        function updateQuestPreview(textarea, step) {
+            const previewDiv = document.getElementById('quest_preview_' + step);
+            updatePreviewContent(textarea.value, previewDiv);
+        }
+
+        function updatePreviewContent(text, previewDiv) {
+            // Простая обработка Telegram разметки для предварительного просмотра
+            text = text
+                .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+                .replace(/\*(.*?)\*/g, '<em>$1</em>')
+                .replace(/`(.*?)`/g, '<code>$1</code>')
+                .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank">$1</a>')
+                .replace(/<b>(.*?)<\/b>/g, '<strong>$1</strong>')
+                .replace(/<i>(.*?)<\/i>/g, '<em>$1</em>')
+                .replace(/\n/g, '<br>');
+
+            previewDiv.innerHTML = text;
+        }
+
+        // Инициализация предварительного просмотра
+        document.addEventListener('DOMContentLoaded', function() {
+            document.querySelectorAll('.text-editor').forEach(function(textarea) {
+                // Определяем тип предпросмотра
+                if (textarea.name && textarea.name.startsWith('question_')) {
+                    const index = textarea.name.split('_')[1];
+                    updateSurveyPreview(textarea, index);
+                } else if (textarea.name && textarea.name.includes('quest_step_')) {
+                    const step = textarea.name.split('_')[2];
+                    updateQuestPreview(textarea, step);
+                } else {
+                    updatePreview(textarea);
+                }
+            });
+        });
+    </script>
+</body>
+</html>

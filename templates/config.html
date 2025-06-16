@@ -1,0 +1,849 @@
+<!DOCTYPE html>
+<html lang="ru" data-bs-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <title>Настройки системы – Админка ЧАТ-БОТА</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .nav-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 1rem 0;
+        }
+        .stats-card {
+            background: rgba(33, 37, 41, 0.95);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+    </style>
+</head>
+<body>
+    <!-- Навигация -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark sticky-top">
+        <div class="container">
+            <a class="navbar-brand" href="/admin">
+                <i class="fas fa-robot me-2"></i> Админка ЧАТ-БОТА
+            </a>
+            <div class="navbar-nav ms-auto">
+                <a class="nav-link" href="{{ url_for('index') }}"><i class="fas fa-tachometer-alt me-1"></i> Дашборд</a>
+                  <a class="nav-link" href="{{ url_for('participants') }}"><i class="fas fa-users me-1"></i> Участники</a>
+                    <a class="nav-link" href="{{ url_for('broadcast') }}"><i class="fas fa-bullhorn me-1"></i> Рассылка</a>
+                       <a class="nav-link" href="{{ url_for('dance_slots') }}"><i class="fas fa-music me-1"></i> Слоты</a>
+                    <a class="nav-link" href="{{ url_for('text_messages') }}"><i class="fas fa-edit me-1"></i> Тексты</a>
+                    <a class="nav-link" href="{{ url_for('config') }}"><i class="fas fa-cogs me-1"></i> Настройки</a>
+                    <a class="nav-link" href="/admin/logout"><i class="fas fa-sign-out-alt me-1"></i> Выход</a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Заголовок -->
+    <div class="nav-header">
+        <div class="container">
+            <h1><i class="fas fa-cogs me-2"></i> Настройки системы</h1>
+            <p class="mb-0">Конфигурация бота и системных параметров</p>
+        </div>
+    </div>
+
+    <div class="container mt-4">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ 'danger' if category == 'error' else category }} alert-dismissible fade show" role="alert">
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        <!-- Вкладки -->
+        <ul class="nav nav-tabs" id="configTabs" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active" id="bot-config-tab" data-bs-toggle="tab" data-bs-target="#bot-config" type="button">
+                    <i class="fas fa-robot me-1"></i> Настройки бота
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="system-config-tab" data-bs-toggle="tab" data-bs-target="#system-config" type="button">
+                    <i class="fas fa-sliders-h me-1"></i> Системные настройки
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="status-tab" data-bs-toggle="tab" data-bs-target="#status" type="button">
+                    <i class="fas fa-info-circle me-1"></i> Статус и мониторинг
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="monitoring-tab" data-bs-toggle="tab" data-bs-target="#monitoring" type="button">
+                    <i class="fas fa-chart-line me-1"></i> Мониторинг
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="backup-tab" data-bs-toggle="tab" data-bs-target="#backup" type="button">
+                    <i class="fas fa-download me-1"></i> Резервные копии
+                </button>
+            </li>
+        </ul>
+
+        <div class="tab-content" id="configTabsContent">
+            <!-- Настройки бота -->
+            <div class="tab-pane fade show active" id="bot-config" role="tabpanel">
+                <div class="mt-4">
+                    <div class="row">
+                        <div class="col-md-8">
+                            <div class="card stats-card">
+                                <div class="card-header bg-primary">
+                                    <h5 class="mb-0"><i class="fas fa-robot me-2"></i> Основные настройки бота</h5>
+                                </div>
+                                <div class="card-body">
+                                    <form method="POST" action="{{ url_for('update_bot_config') }}">
+                                        <div class="mb-3">
+                                            <label for="bot_token" class="form-label">Токен бота</label>
+                                            <input type="text" class="form-control" id="bot_token" name="bot_token" 
+                                                   value="{{ bot_config.get('BOT_TOKEN', '') }}" placeholder="7816404381:AAH...">
+                                            <div class="form-text">Токен Telegram бота</div>
+                                        </div>
+
+                                        <div class="mb-3">
+                                            <label for="replicate_token" class="form-label">Токен Replicate</label>
+                                            <input type="text" class="form-control" id="replicate_token" name="replicate_token" 
+                                                   value="{{ bot_config.get('REPLICATE_API_TOKEN', '') }}" placeholder="r8_...">
+                                            <div class="form-text">API токен для генерации стикеров</div>
+                                        </div>
+
+                                        <div class="mb-3">
+                                            <label for="bot_mode" class="form-label">Режим работы бота</label>
+                                            <select class="form-select" id="bot_mode" name="bot_mode">
+                                                <option value="polling" {{ 'selected' if bot_config.get('BOT_MODE', 'polling') == 'polling' }}>Polling (опрос)</option>
+                                                <option value="webhook" {{ 'selected' if bot_config.get('BOT_MODE', 'polling') == 'webhook' }}>Webhook</option>
+                                            </select>
+                                        </div>
+
+                                        <div class="mb-3" id="webhook_settings" style="display: {{ 'block' if bot_config.get('BOT_MODE', 'polling') == 'webhook' else 'none' }};">
+                                            <label for="webhook_domain" class="form-label">Домен для webhook</label>
+                                            <input type="text" class="form-control" id="webhook_domain" name="webhook_domain" 
+                                                   value="{{ bot_config.get('WEBHOOK_DOMAIN', '') }}" placeholder="https://your-domain.com">
+                                            <div class="form-text">Полный URL домена для webhook</div>
+                                        </div>
+
+                                        <button type="submit" class="btn btn-primary">
+                                            <i class="fas fa-save me-1"></i> Сохранить настройки бота
+                                        </button>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-md-4">
+                            <!-- Быстрые действия -->
+                            <div class="card stats-card">
+                                <div class="card-header bg-dark">
+                                    <h6 class="mb-0"><i class="fas fa-tools me-2"></i> Быстрые действия</h6>
+                                </div>
+                                <div class="card-body">
+                                    <div class="d-grid gap-2">
+                                        <a href="{{ url_for('text_messages') }}" class="btn btn-outline-primary">
+                                            <i class="fas fa-edit me-1"></i> Редактировать тексты
+                                        </a>
+                                        <button class="btn btn-outline-warning" onclick="restartBot()">
+                                            <i class="fas fa-sync me-1"></i> Перезапустить бота
+                                        </button>
+                                        <a href="{{ url_for('export_config') }}" class="btn btn-outline-success">
+                                            <i class="fas fa-download me-1"></i> Экспорт настроек
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Системные настройки -->
+            <div class="tab-pane fade" id="system-config" role="tabpanel">
+                <div class="mt-4">
+                    <div class="row">
+                        <div class="col-md-12">
+                            <!-- Системные настройки -->
+                            <div class="card stats-card mb-4">
+                                <div class="card-header bg-success">
+                                    <h5 class="mb-0"><i class="fas fa-sliders-h me-2"></i> Системные настройки</h5>
+                                </div>
+                                <div class="card-body">
+                                    {% if configs %}
+                                        <div class="table-responsive">
+                                            <table class="table table-hover">
+                                                <thead>
+                                                    <tr>
+                                                        <th>Ключ</th>
+                                                        <th>Значение</th>
+                                                        <th>Тип</th>
+                                                        <th>Описание</th>
+                                                        <th>Действия</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    {% for config in configs %}
+                                                    <tr>
+                                                        <td><code>{{ config.config_key }}</code></td>
+                                                        <td>
+                                                            {% if config.config_type == 'bool' %}
+                                                                <span class="badge bg-{{ 'success' if config.get_value() else 'secondary' }}">
+                                                                    {{ 'Да' if config.get_value() else 'Нет' }}
+                                                                </span>
+                                                            {% else %}
+                                                                {{ config.config_value[:50] }}{% if config.config_value|length > 50 %}...{% endif %}
+                                                            {% endif %}
+                                                        </td>
+                                                        <td><span class="badge bg-info">{{ config.config_type }}</span></td>
+                                                        <td>{{ config.description or '—' }}</td>
+                                                        <td>
+                                                            <a href="{{ url_for('edit_config', config_id=config.id) }}" class="btn btn-sm btn-outline-primary">
+                                                                <i class="fas fa-edit"></i>
+                                                            </a>
+                                                        </td>
+                                                    </tr>
+                                                    {% endfor %}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    {% else %}
+                                        <p class="text-muted">Настройки не найдены.</p>
+                                    {% endif %}
+                                </div>
+                            </div>
+
+                            <!-- Добавление новой настройки -->
+                            <div class="card stats-card">
+                                <div class="card-header bg-warning text-dark">
+                                    <h5 class="mb-0"><i class="fas fa-plus me-2"></i> Добавить настройку</h5>
+                                </div>
+                                <div class="card-body">
+                                    <form method="POST" action="{{ url_for('add_config') }}">
+                                        <div class="row">
+                                            <div class="col-md-3">
+                                                <input type="text" class="form-control" name="config_key" placeholder="Ключ" required>
+                                            </div>
+                                            <div class="col-md-3">
+                                                <input type="text" class="form-control" name="config_value" placeholder="Значение" required>
+                                            </div>
+                                            <div class="col-md-2">
+                                                <select class="form-select" name="config_type">
+                                                    <option value="text">text</option>
+                                                    <option value="int">int</option>
+                                                    <option value="bool">bool</option>
+                                                    <option value="json">json</option>
+                                                </select>
+                                            </div>
+                                            <div class="col-md-3">
+                                                <input type="text" class="form-control" name="description" placeholder="Описание">
+                                            </div>
+                                            <div class="col-md-1">
+                                                <button type="submit" class="btn btn-warning">
+                                                    <i class="fas fa-plus"></i>
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Статус и мониторинг -->
+            <div class="tab-pane fade" id="status" role="tabpanel">
+                <div class="mt-4">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <!-- Статус бота -->
+                            <div class="card stats-card mb-4">
+                                <div class="card-header bg-info">
+                                    <h5 class="mb-0"><i class="fas fa-robot me-2"></i> Статус бота</h5>
+                                </div>
+                                <div class="card-body">
+                                    <div class="row">
+                                        <div class="col-6">
+                                            <strong>Режим работы:</strong>
+                                        </div>
+                                        <div class="col-6">
+                                            <span class="badge bg-{{ 'success' if bot_config.get('BOT_MODE', 'polling') == 'polling' else 'warning' }}">
+                                                {{ bot_config.get('BOT_MODE', 'polling').title() }}
+                                            </span>
+                                        </div>
+                                    </div>
+                                    <hr>
+                                    <div class="row">
+                                        <div class="col-6">
+                                            <strong>Статус:</strong>
+                                        </div>
+                                        <div class="col-6">
+                                            <span class="badge bg-success">
+                                                <i class="fas fa-check-circle me-1"></i> Активен
+                                            </span>
+                                        </div>
+                                    </div>
+                                    <hr>
+                                    <div class="row">
+                                        <div class="col-6">
+                                            <strong>Последняя проверка:</strong>
+                                        </div>
+                                        <div class="col-6">
+                                            <small>{{ current_time.strftime('%d.%m.%Y %H:%M:%S') }}</small>
+                                        </div>
+                                    </div>
+                                    {% if bot_config.get('BOT_MODE') == 'webhook' %}
+                                    <hr>
+                                    <div class="row">
+                                        <div class="col-12">
+                                            <strong>Webhook URL:</strong><br>
+                                            <small class="text-muted">{{ bot_config.get('WEBHOOK_DOMAIN', '') }}/webhook</small>
+                                        </div>
+                                    </div>
+                                    {% endif %}
+                                    <hr>
+                                    <div class="row">
+                                        <div class="col-6">
+                                            <strong>Токен настроен:</strong>
+                                        </div>
+                                        <div class="col-6">
+                                            {% if bot_config.get('BOT_TOKEN') %}
+                                                <span class="badge bg-success">
+                                                    <i class="fas fa-check me-1"></i> Да
+                                                </span>
+                                            {% else %}
+                                                <span class="badge bg-danger">
+                                                    <i class="fas fa-times me-1"></i> Нет
+                                                </span>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-md-6">
+                            <!-- Информация о системе -->
+                            <div class="card stats-card mb-4">
+                                <div class="card-header bg-secondary">
+                                    <h5 class="mb-0"><i class="fas fa-server me-2"></i> Информация о системе</h5>
+                                </div>
+                                <div class="card-body">
+                                    <div class="row">
+                                        <div class="col-6">
+                                            <strong>Время работы:</strong>
+                                        </div>
+                                        <div class="col-6">
+                                            <small>{{ current_time.strftime('%d.%m.%Y %H:%M:%S') }}</small>
+                                        </div>
+                                    </div>
+                                    <hr>
+                                    <div class="row">
+                                        <div class="col-6">
+                                            <strong>База данных:</strong>
+                                        </div>
+                                        <div class="col-6">
+                                            <span class="badge bg-success">
+                                                <i class="fas fa-database me-1"></i> Подключена
+                                            </span>
+                                        </div>
+                                    </div>
+                                    <hr>
+                                    <div class="row">
+                                        <div class="col-6">
+                                            <strong>Replicate API:</strong>
+                                        </div>
+                                        <div class="col-6">
+                                            {% if bot_config.get('REPLICATE_API_TOKEN') %}
+                                                <span class="badge bg-success">
+                                                    <i class="fas fa-check me-1"></i> Настроен
+                                                </span>
+                                            {% else %}
+                                                <span class="badge bg-warning">
+                                                    <i class="fas fa-exclamation-triangle me-1"></i> Не настроен
+                                                </span>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                    <hr>
+                                    <div class="row">
+                                        <div class="col-6">
+                                            <strong>Логи:</strong>
+                                        </div>
+                                        <div class="col-6">
+                                            <span class="badge bg-info">
+                                                <i class="fas fa-file-alt me-1"></i> Активны
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Действия по управлению -->
+                    <div class="row">
+                        <div class="col-md-12">
+                            <div class="card stats-card">
+                                <div class="card-header bg-dark">
+                                    <h5 class="mb-0"><i class="fas fa-tools me-2"></i> Управление системой</h5>
+                                </div>
+                                <div class="card-body">
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <h6>Управление ботом</h6>
+                                            <div class="d-grid gap-2">
+                                                <button class="btn btn-outline-danger" onclick="cleanupBot()">
+                                                    <i class="fas fa-broom me-1"></i> Очистить состояние бота
+                                                </button>
+                                                <button class="btn btn-outline-warning" onclick="restartBot()">
+                                                    <i class="fas fa-sync me-1"></i> Перезапустить бота
+                                                </button>
+                                                <button class="btn btn-outline-info" onclick="reinitReplicate()">
+                                                    <i class="fas fa-magic me-1"></i> Переинициализировать Replicate
+                                                </button>
+                                                <button class="btn btn-outline-info" onclick="checkBotStatus()">
+                                                    <i class="fas fa-heartbeat me-1"></i> Проверить статус
+                                                </button>
+                                            </div>
+                                            
+                                            <h6 class="mt-3">Управление Webhook</h6>
+                                            <div class="d-grid gap-2">
+                                                <button class="btn btn-outline-success" onclick="setWebhook()">
+                                                    <i class="fas fa-link me-1"></i> Установить webhook
+                                                </button>
+                                                <button class="btn btn-outline-primary" onclick="checkWebhookStatus()">
+                                                    <i class="fas fa-info-circle me-1"></i> Статус webhook
+                                                </button>
+                                                <button class="btn btn-outline-secondary" onclick="removeWebhook()">
+                                                    <i class="fas fa-unlink me-1"></i> Удалить webhook
+                                                </button>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <h6>Экспорт и резервные копии</h6>
+                                            <div class="d-grid gap-2">
+                                                <a href="{{ url_for('export_config') }}" class="btn btn-outline-success">
+                                                    <i class="fas fa-download me-1"></i> Экспорт настроек
+                                                </a>
+                                                <button class="btn btn-outline-secondary" onclick="downloadLogs()">
+                                                    <i class="fas fa-file-download me-1"></i> Скачать логи
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Мониторинг -->
+            <div class="tab-pane fade" id="monitoring" role="tabpanel">
+                <div class="mt-4">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="card stats-card mb-4">
+                                <div class="card-header bg-info">
+                                    <h5 class="mb-0"><i class="fas fa-server me-2"></i> Системные метрики</h5>
+                                </div>
+                                <div class="card-body" id="system-metrics">
+                                    <div class="text-center">
+                                        <div class="spinner-border text-primary" role="status">
+                                            <span class="visually-hidden">Загрузка...</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="card stats-card mb-4">
+                                <div class="card-header bg-success">
+                                    <h5 class="mb-0"><i class="fas fa-robot me-2"></i> Метрики бота</h5>
+                                </div>
+                                <div class="card-body" id="bot-metrics">
+                                    <div class="text-center">
+                                        <div class="spinner-border text-primary" role="status">
+                                            <span class="visually-hidden">Загрузка...</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-12">
+                            <div class="card stats-card">
+                                <div class="card-header bg-warning text-dark">
+                                    <h5 class="mb-0"><i class="fas fa-heartbeat me-2"></i> Проверка здоровья</h5>
+                                </div>
+                                <div class="card-body" id="health-checks">
+                                    <div class="text-center">
+                                        <div class="spinner-border text-primary" role="status">
+                                            <span class="visually-hidden">Загрузка...</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Резервные копии -->
+            <div class="tab-pane fade" id="backup" role="tabpanel">
+                <div class="mt-4">
+                    <div class="row">
+                        <div class="col-md-8">
+                            <div class="card stats-card">
+                                <div class="card-header bg-primary">
+                                    <h5 class="mb-0"><i class="fas fa-list me-2"></i> Список резервных копий</h5>
+                                </div>
+                                <div class="card-body" id="backup-list">
+                                    <div class="text-center">
+                                        <div class="spinner-border text-primary" role="status">
+                                            <span class="visually-hidden">Загрузка...</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="card stats-card">
+                                <div class="card-header bg-success">
+                                    <h5 class="mb-0"><i class="fas fa-plus me-2"></i> Создать копию</h5>
+                                </div>
+                                <div class="card-body">
+                                    <p>Создание полной резервной копии включает:</p>
+                                    <ul>
+                                        <li>База данных</li>
+                                        <li>Конфигурация</li>
+                                        <li>Статические файлы</li>
+                                        <li>Изображения</li>
+                                    </ul>
+                                    <button class="btn btn-success w-100" onclick="createBackup()">
+                                        <i class="fas fa-download me-1"></i> Создать резервную копию
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Показать/скрыть настройки webhook
+        document.getElementById('bot_mode').addEventListener('change', function() {
+            const webhookSettings = document.getElementById('webhook_settings');
+            if (this.value === 'webhook') {
+                webhookSettings.style.display = 'block';
+            } else {
+                webhookSettings.style.display = 'none';
+            }
+        });
+
+        function restartBot() {
+            if (confirm('Перезапустить бота? Это может занять несколько секунд.')) {
+                fetch('/restart_bot', {method: 'POST'})
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            alert('Бот перезапущен успешно!');
+                            setTimeout(() => location.reload(), 2000);
+                        } else {
+                            alert('Ошибка при перезапуске: ' + data.error);
+                        }
+                    })
+                    .catch(error => {
+                        alert('Ошибка соединения: ' + error.message);
+                    });
+            }
+        }
+
+        function checkBotStatus() {
+            fetch('/check_bot_status')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        alert(`Бот работает!\nИмя: ${data.bot_info.first_name}\nUsername: @${data.bot_info.username}\nРежим: ${data.mode}`);
+                    } else {
+                        alert(`Ошибка: ${data.error}`);
+                    }
+                })
+                .catch(error => {
+                    alert(`Ошибка запроса: ${error}`);
+                });
+        }
+
+        function cleanupBot() {
+            if (confirm('Очистить состояние бота? Это удалит webhook и сбросит все состояния. Рекомендуется при конфликтах между экземплярами.')) {
+                fetch('/cleanup_bot', {method: 'POST'})
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            alert(data.message);
+                        } else {
+                            alert('Ошибка при очистке: ' + data.error);
+                        }
+                    })
+                    .catch(error => {
+                        alert('Ошибка соединения: ' + error.message);
+                    });
+            }
+        }
+
+        function reinitReplicate() {
+            if (confirm('Переинициализировать Replicate клиент с новым токеном?')) {
+                fetch('/reinit_replicate', {method: 'POST'})
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            alert(data.message);
+                        } else {
+                            alert('Ошибка: ' + data.error);
+                        }
+                    })
+                    .catch(error => {
+                        alert('Ошибка соединения: ' + error.message);
+                    });
+            }
+        }
+
+        function checkDeploymentStatus() {
+            fetch('/deployment/status')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.error) {
+                        alert(`Ошибка: ${data.error}`);
+                    } else {
+                        const info = `Статус деплоя:\n` +
+                            `Режим: ${data.deployment_mode}\n` +
+                            `URL: ${data.repl_url}\n` +
+                            `Режим бота: ${data.bot_mode}\n` +
+                            `Последний деплой: ${data.last_redeploy}`;
+                        alert(info);
+                    }
+                })
+                .catch(error => {
+                    alert(`Ошибка запроса: ${error}`);
+                });
+        }
+
+        function redeployApp() {
+            if (!confirm('Вы уверены, что хотите перезапустить деплой? Это может прервать работу бота на несколько минут.')) {
+                return;
+            }
+
+            fetch('/deployment/redeploy', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        alert(data.message);
+                    } else {
+                        alert(`Ошибка: ${data.error}`);
+                    }
+                })
+                .catch(error => {
+                    alert(`Ошибка запроса: ${error}`);
+                });
+        }
+
+        function setWebhook() {
+            if (confirm('Установить webhook? Убедитесь, что домен правильно настроен.')) {
+                fetch('/webhook/set', {method: 'POST'})
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            alert('Webhook успешно установлен!');
+                        } else {
+                            alert('Ошибка установки webhook: ' + data.error);
+                        }
+                    })
+                    .catch(error => {
+                        alert('Ошибка соединения: ' + error.message);
+                    });
+            }
+        }
+
+        function checkWebhookStatus() {
+            fetch('/webhook/status')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        const info = data.webhook_info;
+                        const status = `Статус Webhook:\n` +
+                            `URL: ${info.url || 'Не установлен'}\n` +
+                            `Ожидающих обновлений: ${info.pending_update_count}\n` +
+                            `Максимум соединений: ${info.max_connections}\n` +
+                            `Последняя ошибка: ${info.last_error_message || 'Нет ошибок'}`;
+                        alert(status);
+                    } else {
+                        alert(`Ошибка: ${data.error}`);
+                    }
+                })
+                .catch(error => {
+                    alert(`Ошибка запроса: ${error}`);
+                });
+        }
+
+        function removeWebhook() {
+            if (confirm('Удалить webhook? Бот перейдет в режим polling.')) {
+                fetch('/webhook/remove', {method: 'POST'})
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            alert('Webhook успешно удален!');
+                        } else {
+                            alert('Ошибка удаления webhook: ' + data.error);
+                        }
+                    })
+                    .catch(error => {
+                        alert('Ошибка соединения: ' + error.message);
+                    });
+            }
+        }
+
+        // Функции мониторинга
+        function loadMonitoringData() {
+            // Загрузка системных метрик
+            fetch('/api/stats')
+                .then(response => response.json())
+                .then(data => {
+                    const systemMetrics = document.getElementById('system-metrics');
+                    systemMetrics.innerHTML = `
+                        <div class="row">
+                            <div class="col-6"><strong>CPU:</strong></div>
+                            <div class="col-6">${data.system.cpu_percent.toFixed(1)}%</div>
+                        </div>
+                        <div class="row">
+                            <div class="col-6"><strong>Память:</strong></div>
+                            <div class="col-6">${data.system.memory_percent.toFixed(1)}%</div>
+                        </div>
+                        <div class="row">
+                            <div class="col-6"><strong>Диск:</strong></div>
+                            <div class="col-6">${data.system.disk_usage.toFixed(1)}%</div>
+                        </div>
+                    `;
+
+                    const botMetrics = document.getElementById('bot-metrics');
+                    botMetrics.innerHTML = `
+                        <div class="row">
+                            <div class="col-6"><strong>Пользователей:</strong></div>
+                            <div class="col-6">${data.bot.total_users}</div>
+                        </div>
+                        <div class="row">
+                            <div class="col-6"><strong>Новых за день:</strong></div>
+                            <div class="col-6">${data.bot.new_users_today}</div>
+                        </div>
+                        <div class="row">
+                            <div class="col-6"><strong>Активность за день:</strong></div>
+                            <div class="col-6">${data.bot.active_registrations}</div>
+                        </div>
+                        <div class="row">
+                            <div class="col-6"><strong>Ошибок за день:</strong></div>
+                            <div class="col-6">${data.bot.error_rate}</div>
+                        </div>
+                    `;
+                })
+                .catch(error => {
+                    console.error('Error loading monitoring data:', error);
+                });
+
+            // Загрузка проверки здоровья
+            fetch('/api/health')
+                .then(response => response.json())
+                .then(data => {
+                    const healthChecks = document.getElementById('health-checks');
+                    let html = `<div class="alert alert-${data.status === 'healthy' ? 'success' : 'danger'}">
+                        <strong>Статус системы: ${data.status === 'healthy' ? 'Здорова' : 'Проблемы'}</strong>
+                    </div><div class="row">`;
+                    
+                    for (const [check, status] of Object.entries(data.checks)) {
+                        const icon = status ? 'fas fa-check text-success' : 'fas fa-times text-danger';
+                        html += `
+                            <div class="col-md-6 mb-2">
+                                <i class="${icon}"></i> ${check}: ${status ? 'OK' : 'Ошибка'}
+                            </div>
+                        `;
+                    }
+                    html += '</div>';
+                    healthChecks.innerHTML = html;
+                })
+                .catch(error => {
+                    console.error('Error loading health data:', error);
+                });
+        }
+
+        function loadBackupList() {
+            fetch('/backup/list')
+                .then(response => response.json())
+                .then(data => {
+                    const backupList = document.getElementById('backup-list');
+                    if (data.success && data.backups.length > 0) {
+                        let html = '<div class="table-responsive"><table class="table table-hover"><thead><tr><th>Название</th><th>Дата создания</th><th>Действия</th></tr></thead><tbody>';
+                        data.backups.forEach(backup => {
+                            html += `
+                                <tr>
+                                    <td>${backup.name}</td>
+                                    <td>${new Date(backup.created).toLocaleString()}</td>
+                                    <td>
+                                        <button class="btn btn-sm btn-outline-primary" onclick="downloadBackup('${backup.name}')">
+                                            <i class="fas fa-download"></i> Скачать
+                                        </button>
+                                    </td>
+                                </tr>
+                            `;
+                        });
+                        html += '</tbody></table></div>';
+                        backupList.innerHTML = html;
+                    } else {
+                        backupList.innerHTML = '<p class="text-muted">Резервные копии не найдены</p>';
+                    }
+                })
+                .catch(error => {
+                    console.error('Error loading backup list:', error);
+                });
+        }
+
+        function createBackup() {
+            if (confirm('Создать резервную копию? Это может занять некоторое время.')) {
+                fetch('/backup/create', {method: 'POST'})
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            alert('Резервная копия создана успешно!');
+                            loadBackupList();
+                        } else {
+                            alert('Ошибка создания резервной копии: ' + data.error);
+                        }
+                    })
+                    .catch(error => {
+                        alert('Ошибка соединения: ' + error.message);
+                    });
+            }
+        }
+
+        // Автообновление мониторинга
+        setInterval(function() {
+            if (document.getElementById('monitoring-tab').classList.contains('active')) {
+                loadMonitoringData();
+            }
+        }, 30000); // Каждые 30 секунд
+
+        // Загрузка данных при переключении вкладок
+        document.getElementById('monitoring-tab').addEventListener('click', loadMonitoringData);
+        document.getElementById('backup-tab').addEventListener('click', loadBackupList);
+    </script>
+</body>
+</html>

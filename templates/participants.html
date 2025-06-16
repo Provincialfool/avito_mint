@@ -1,0 +1,360 @@
+
+<!DOCTYPE html>
+<html lang="ru" data-bs-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Участники — Админка ЧАТ-БОТА</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .nav-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 1rem 0;
+        }
+        .stats-card {
+            background: rgba(33, 37, 41, 0.95);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        .activity-check {
+            font-size: 1.2em;
+            color: #198754;
+        }
+        .activity-cross {
+            font-size: 1.2em;
+            color: #dc3545;
+        }
+    </style>
+</head>
+<body>
+    <!-- Навигация -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark sticky-top">
+        <div class="container">
+            <a class="navbar-brand" href="/admin">
+                <i class="fas fa-robot me-2"></i> Админка ЧАТ-БОТА
+            </a>
+            <div class="navbar-nav ms-auto">
+                <a class="nav-link" href="{{ url_for('index') }}"><i class="fas fa-tachometer-alt me-1"></i> Дашборд</a>
+                  <a class="nav-link" href="{{ url_for('participants') }}"><i class="fas fa-users me-1"></i> Участники</a>
+                    <a class="nav-link" href="{{ url_for('broadcast') }}"><i class="fas fa-bullhorn me-1"></i> Рассылка</a>
+                       <a class="nav-link" href="{{ url_for('dance_slots') }}"><i class="fas fa-music me-1"></i> Слоты</a>
+                    <a class="nav-link" href="{{ url_for('text_messages') }}"><i class="fas fa-edit me-1"></i> Тексты</a>
+                    <a class="nav-link" href="{{ url_for('config') }}"><i class="fas fa-cogs me-1"></i> Настройки</a>
+                    <a class="nav-link" href="/admin/logout"><i class="fas fa-sign-out-alt me-1"></i> Выход</a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Заголовок -->
+    <div class="nav-header">
+        <div class="container">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h1><i class="fas fa-users me-2"></i> Участники ({{ users.total }})</h1>
+                    <p class="mb-0">Управление пользователями</p>
+                </div>
+                <div class="d-flex gap-2">
+                    <a href="{{ url_for('export_csv') }}" class="btn btn-outline-light">
+                        <i class="fas fa-download me-1"></i> Полный экспорт
+                    </a>
+                    <a href="{{ url_for('export_filtered_csv') }}" class="btn btn-outline-light">
+                        <i class="fas fa-filter me-1"></i> Экспорт с фильтрами
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="container mt-4">
+        <!-- Фильтры -->
+        <div class="card mb-4 stats-card">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="fas fa-filter me-2"></i> Фильтры</h5>
+            </div>
+            <div class="card-body">
+                <form method="GET" action="{{ url_for('participants') }}" class="row g-3">
+                    <div class="col-md-3">
+                        <label class="form-label">Поиск по имени/username</label>
+                        <input type="text" class="form-control" name="search" value="{{ request.args.get('search', '') }}" placeholder="Введите имя или @username">
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label">Согласие</label>
+                        <select class="form-select" name="consent">
+                            <option value="">Все</option>
+                            <option value="true" {{ 'selected' if request.args.get('consent') == 'true' }}>Дали</option>
+                            <option value="false" {{ 'selected' if request.args.get('consent') == 'false' }}>Не дали</option>
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label">Опрос</label>
+                        <select class="form-select" name="survey">
+                            <option value="">Все</option>
+                            <option value="true" {{ 'selected' if request.args.get('survey') == 'true' }}>Завершили</option>
+                            <option value="false" {{ 'selected' if request.args.get('survey') == 'false' }}>Не завершили</option>
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label">Танцы</label>
+                        <select class="form-select" name="dance">
+                            <option value="">Все</option>
+                            <option value="true" {{ 'selected' if request.args.get('dance') == 'true' }}>Записались</option>
+                            <option value="false" {{ 'selected' if request.args.get('dance') == 'false' }}>Не записались</option>
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label">Карьера</label>
+                        <select class="form-select" name="career">
+                            <option value="">Все</option>
+                            <option value="true" {{ 'selected' if request.args.get('career') == 'true' }}>Маякнули</option>
+                            <option value="false" {{ 'selected' if request.args.get('career') == 'false' }}>Не маякнули</option>
+                        </select>
+                    </div>
+                    <div class="col-md-1 d-flex align-items-end">
+                        <button type="submit" class="btn btn-primary w-100">
+                            <i class="fas fa-search"></i>
+                        </button>
+                    </div>
+                </form>
+                {% if request.args %}
+                <div class="mt-2">
+                    <a href="{{ url_for('participants') }}" class="btn btn-outline-secondary btn-sm">
+                        <i class="fas fa-times me-1"></i> Сбросить фильтры
+                    </a>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="card stats-card">
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle">
+                        <thead>
+                            <tr>
+                                <th>Telegram</th>
+                                <th>Имя</th>
+                                <th title="Согласие на обработку данных">Согласие</th>
+                                <th title="Опрос завершен">Опрос</th>
+                                <th title="Записался на танцы">Танцы</th>
+                                <th title="Маякнул карьере">Карьера</th>
+                                <th title="Создал стикер">Стикер</th>
+                                <th>Действия</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for user in users.items %}
+                            <tr>
+                                <td>
+                                    {% if user.username %}
+                                        <a href="https://t.me/{{ user.username }}" target="_blank">@{{ user.username }}</a>
+                                    {% else %}
+                                        <span class="text-muted">{{ user.telegram_id }}</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {{ user.first_name or '' }} {{ user.last_name or '' }}
+                                </td>
+                                <td class="text-center">
+                                    {% if user.consent_given %}
+                                        <i class="fas fa-check activity-check" title="Дал согласие"></i>
+                                    {% else %}
+                                        <i class="fas fa-times activity-cross" title="Не дал согласие"></i>
+                                    {% endif %}
+                                </td>
+                                <td class="text-center">
+                                    {% if user.survey_completed %}
+                                        <i class="fas fa-check activity-check" title="Завершил опрос"></i>
+                                    {% else %}
+                                        <i class="fas fa-times activity-cross" title="Не завершил опрос"></i>
+                                    {% endif %}
+                                </td>
+                                <td class="text-center">
+                                    {% if user.has_dance_registration %}
+                                        <i class="fas fa-check activity-check" title="Записался на танцы"></i>
+                                    {% else %}
+                                        <i class="fas fa-times activity-cross" title="Не записался на танцы"></i>
+                                    {% endif %}
+                                </td>
+                                <td class="text-center">
+                                    {% if user.interested_in_vacancies %}
+                                        <i class="fas fa-check activity-check" title="Маякнул карьере"></i>
+                                    {% else %}
+                                        <i class="fas fa-times activity-cross" title="Не маякнул карьере"></i>
+                                    {% endif %}
+                                </td>
+                                <td class="text-center">
+                                    {% if user.has_sticker %}
+                                        <i class="fas fa-check activity-check" title="Создал стикер"></i>
+                                    {% else %}
+                                        <i class="fas fa-times activity-cross" title="Не создал стикер"></i>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <div class="d-flex gap-1">
+                                        <a href="{{ url_for('user_detail', telegram_id=user.telegram_id) }}" 
+                                           class="btn btn-outline-primary btn-sm" title="Профиль">
+                                            <i class="fas fa-eye"></i>
+                                        </a>
+                                        <button class="btn btn-outline-warning btn-sm" title="Сбросить данные" 
+                                                onclick="resetUser('{{ user.telegram_id }}', '{{ user.first_name }} {{ user.last_name }}')">
+                                            <i class="fas fa-undo"></i>
+                                        </button>
+                                        <button class="btn btn-outline-danger btn-sm" title="Удалить" 
+                                                onclick="deleteUser('{{ user.telegram_id }}', '{{ user.first_name }} {{ user.last_name }}')">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Пагинация -->
+                {% if users.pages > 1 %}
+                <nav class="mt-4">
+                    <ul class="pagination justify-content-center">
+                        {% if users.has_prev %}
+                            <li class="page-item"><a class="page-link" href="{{ url_for('participants', page=users.prev_num, **request.args) }}"><i class="fas fa-chevron-left"></i></a></li>
+                        {% endif %}
+                        {% for page_num in users.iter_pages() %}
+                            {% if page_num %}
+                                {% if page_num == users.page %}
+                                    <li class="page-item active"><span class="page-link">{{ page_num }}</span></li>
+                                {% else %}
+                                    <li class="page-item"><a class="page-link" href="{{ url_for('participants', page=page_num, **request.args) }}">{{ page_num }}</a></li>
+                                {% endif %}
+                            {% else %}
+                                <li class="page-item disabled"><span class="page-link">…</span></li>
+                            {% endif %}
+                        {% endfor %}
+                        {% if users.has_next %}
+                            <li class="page-item"><a class="page-link" href="{{ url_for('participants', page=users.next_num, **request.args) }}"><i class="fas fa-chevron-right"></i></a></li>
+                        {% endif %}
+                    </ul>
+                </nav>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Модалка подтверждения сброса -->
+    <div class="modal fade" id="resetUserModal" tabindex="-1" aria-labelledby="resetUserModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <form id="resetUserForm">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="resetUserModalLabel"><i class="fas fa-undo text-warning me-2"></i> Сбросить данные пользователя?</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <p>Вы действительно хотите <strong>сбросить все данные пользователя</strong> <span id="resetUserName"></span>?</p>
+                        <p class="text-warning"><strong>Это действие сбросит:</strong></p>
+                        <ul>
+                            <li>Прогресс опроса</li>
+                            <li>Записи на танцы</li>
+                            <li>Прогресс квеста</li>
+                            <li>Созданные стикеры</li>
+                            <li>Состояние чата в боте</li>
+                        </ul>
+                        <p><strong>Пользователь останется в системе, но все его активности будут сброшены.</strong></p>
+                        <input type="hidden" id="resetUserTelegramId" name="telegram_id">
+                    </div>
+                    <div class="modal-footer">
+                        <button class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+                        <button class="btn btn-warning" id="confirmResetBtn" type="submit"><i class="fas fa-undo me-1"></i> Сбросить</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Модалка подтверждения удаления -->
+    <div class="modal fade" id="deleteUserModal" tabindex="-1" aria-labelledby="deleteUserModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <form id="deleteUserForm">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="deleteUserModalLabel"><i class="fas fa-trash text-danger me-2"></i> Удалить пользователя?</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <p>Вы действительно хотите <strong>полностью удалить пользователя</strong> <span id="deleteUserName"></span>?</p>
+                        <p class="text-danger"><strong>Это действие необратимо. Все данные пользователя будут удалены из базы данных.</strong></p>
+                        <input type="hidden" id="deleteUserTelegramId" name="telegram_id">
+                    </div>
+                    <div class="modal-footer">
+                        <button class="btn btn-secondary" data-bs-dismiss="modal">Отмена</button>
+                        <button class="btn btn-danger" id="confirmDeleteBtn" type="submit"><i class="fas fa-trash me-1"></i> Удалить</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        let deleteModal;
+        let resetModal;
+        
+        document.addEventListener('DOMContentLoaded', () => {
+            deleteModal = new bootstrap.Modal(document.getElementById('deleteUserModal'));
+            resetModal = new bootstrap.Modal(document.getElementById('resetUserModal'));
+            
+            // Обработчик удаления пользователя
+            document.getElementById('deleteUserForm').addEventListener('submit', function(e) {
+                e.preventDefault();
+                const telegramId = document.getElementById('deleteUserTelegramId').value;
+                fetch(`/user/delete/${telegramId}`, {
+                    method: 'POST',
+                    headers: {'X-Requested-With': 'XMLHttpRequest'},
+                })
+                .then(r => r.json())
+                .then(data => {
+                    deleteModal.hide();
+                    if (data.success) {
+                        alert('Пользователь удалён');
+                        location.reload();
+                    } else {
+                        alert('Ошибка: ' + (data.error || 'Не удалось удалить пользователя'));
+                    }
+                });
+            });
+
+            // Обработчик сброса данных пользователя
+            document.getElementById('resetUserForm').addEventListener('submit', function(e) {
+                e.preventDefault();
+                const telegramId = document.getElementById('resetUserTelegramId').value;
+                fetch(`/user/reset/${telegramId}`, {
+                    method: 'POST',
+                    headers: {'X-Requested-With': 'XMLHttpRequest'},
+                })
+                .then(r => r.json())
+                .then(data => {
+                    resetModal.hide();
+                    if (data.success) {
+                        alert('Данные пользователя сброшены');
+                        location.reload();
+                    } else {
+                        alert('Ошибка: ' + (data.error || 'Не удалось сбросить данные пользователя'));
+                    }
+                });
+            });
+        });
+
+        function deleteUser(telegramId, userName) {
+            document.getElementById('deleteUserTelegramId').value = telegramId;
+            document.getElementById('deleteUserName').textContent = userName;
+            deleteModal.show();
+        }
+
+        function resetUser(telegramId, userName) {
+            document.getElementById('resetUserTelegramId').value = telegramId;
+            document.getElementById('resetUserName').textContent = userName;
+            resetModal.show();
+        }
+    </script>
+</body>
+</html>
